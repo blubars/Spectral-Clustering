@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 #  http://scikit-learn.org/stable/auto_examples/cluster/plot_cluster_comparison.html
 ###############################################################
 # Generate datasets. We choose the size big enough to see the scalability
-n_samples = 1500
+n_samples = 1000
 noisy_circles = datasets.make_circles(n_samples=n_samples, factor=.5,
                                       noise=.05)
 noisy_moons = datasets.make_moons(n_samples=n_samples, noise=.05)
@@ -62,7 +62,9 @@ sc_params = {'n_clusters': 2, 'affinity': 'nearest_neighbors'}
 ###############################################################
 def main():
     plot_num = 1
-    plt.figure()
+    plot_shape = (2+2, 2*len(datasets)+2)
+    fig = plt.figure(1, plot_shape)
+    plt.title('Spectral Clustering for different datasets')
     for i, dataset in enumerate(datasets):
         print("Dataset {}:".format(i))
         X, y = dataset
@@ -76,14 +78,12 @@ def main():
 
         # plot:
         colors = ['#377eb8', '#ff7f00', '#4daf4a']
-        y_colors = [colors[label] for label in y]
+        y_colors = [colors[label] for label in y_pred]
         plt.subplot(len(datasets), 1, plot_num)
-        #colors = np.array(list(islice(cycle(['#377eb8', '#ff7f00', '#4daf4a',
-        #                                     '#f781bf', '#a65628', '#984ea3',
-        #                                     '#999999', '#e41a1c', '#dede00']),
-        #                              int(max(y_pred) + 1))))
         plt.scatter(X[:, 0], X[:, 1], s=10, color=y_colors)
+        plt.gca().set_aspect('equal', 'box')
         plot_num += 1
+    fig.tight_layout()
     plt.show()
 
 
