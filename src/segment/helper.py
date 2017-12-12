@@ -21,7 +21,7 @@ def get_distance_matrix(n_rows, n_cols):
     dist_mat = np.zeros((n_points, n_points))
     for i in range(n_points):
         x_i = (i/n_cols, i%n_cols)
-        print i
+        print (i)
         for j in range(i,n_points):
             dist_mat[i,j] = distance(x_i, (j/n_cols, j%n_cols))
             dist_mat[j,i] = dist_mat[i,j]
