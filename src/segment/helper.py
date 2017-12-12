@@ -47,7 +47,7 @@ def get_shi_affinity(gray_mat, sigma_i=0.1, sigma_x=0.1, r=5):
     for i in range(n_pixels-1):
         x_i = (i/shape_y, i%shape_y)
         gray_i = gray_mat[x_i[0], x_i[1]]
-        print i
+        print (i)
         for j in range(i+1, n_pixels):
             x_j = (j/shape_y, j%shape_y)
             dis = distance(x_i, x_j)
@@ -77,16 +77,16 @@ if __name__=='__main__':
     # bri_mat = get_sim_bright_matrix(gray)
     # sig_i = np.std(bri_mat)
     sig_i = 0.35589
-    print sigm_x
+    print (sigm_x)
     # sig_i = 0.33
-    print sig_i
+    print (sig_i)
     # pickle.dump(dist_mat, open('dist.mat', 'wb'))
     #
     # # sim_bri_mat = get_sim_bright_matrix(gray)
     # # pickle.dump(sim_bri_mat, open('sim_bri.mat', 'wb'))
     #
-    print 'sigx =', sigm_x
-    print 'sig1 =', sig_i
+    print ('sigx = ' + str(sigm_x))
+    print ('sig1 = ' + str(sig_i))
     aff_mat = get_shi_affinity(gray, sigma_i=sig_i, sigma_x=sigm_x)
     pickle.dump(aff_mat, open('aff4.mat', 'wb'))
     # print 'ok'

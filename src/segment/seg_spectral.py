@@ -16,7 +16,7 @@ D = np.zeros(A.shape)
 for i in range(A.shape[0]):
     D[i,i] = np.sum(A[i,:])
 
-print 'D done'
+print ('D done')
 
 # Construct Laplacian Matrix:
 #   L = D^{-1/2} A D^{-1/2} --> L[i,j] = -A[i,j]/sqrt(d_i * d_j)
@@ -24,7 +24,7 @@ print 'D done'
 # D^{-1/2}:
 Dinvsq = np.sqrt(np.linalg.inv(D))
 
-print '1'
+print ('1')
 
 L = np.dot(Dinvsq, D-A)
 L = np.dot(L, Dinvsq)
@@ -37,7 +37,7 @@ L = np.dot(L, Dinvsq)
 eigvals, eigvects = np.linalg.eigh(L)
 # eigvals, eigvects = ling.eigs(L, k=11)
 
-print '2'
+print ('2')
 
 best_eigens = []
 for i in range(L.shape[0]):
