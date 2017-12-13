@@ -87,7 +87,7 @@ if __name__=='__main__':
     # # plot_gray(gray)
     dist_mat = get_distance_matrix(gray.shape[0], gray.shape[1])
     sigm_x = np.std(dist_mat)
-    print sigm_x
+    print (sigm_x)
     # sigm_x = 26.38314
     bri_mat = get_sim_bright_matrix(gray)
     sig_i = np.std(bri_mat)
@@ -104,7 +104,7 @@ if __name__=='__main__':
     print ('sigx = ' + str(sigm_x))
     print ('sig1 = ' + str(sig_i))
     aff_mat = get_shi_affinity(dist_mat, bri_mat, sigm_x, sig_i, r=5)
-    print 'got sparse'
+    print ('got sparse')
     # aff_mat = get_shi_nearest_neighbour(gray, sigma_i=sig_i, sigma_x=sigm_x, r=5, k=1000)
     pickle.dump(aff_mat, open('aff5.mat', 'wb'))
     # print 'ok'

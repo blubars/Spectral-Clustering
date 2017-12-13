@@ -31,5 +31,5 @@ plot_gray(gray)
 for key, indices in label2ind.items():
     gray_clus = np.zeros(gray.shape)
     for ind in indices:
-        gray_clus[ind/y_shape, ind%y_shape] = gray[ind/y_shape, ind%y_shape]
+        gray_clus[ind//y_shape, ind%y_shape] = gray[ind//y_shape, ind%y_shape]
     plot_gray(gray_clus)
