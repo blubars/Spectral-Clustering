@@ -1,10 +1,17 @@
 import pickle
 from scipy.sparse import lil_matrix
 import numpy as np
-from helper import rgb2gray, plot_gray
+from helper import rgb2gray, plot_gray, image2affinity
 import scipy.sparse.linalg as ling
+from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse.linalg import inv
 
-A = pickle.load(open('aff5.mat', 'rb')).todense()
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+
+image_file = 'test3.png'
+img = mpimg.imread(image_file)
+A = image2affinity(image_file, r=15)
 
 from numpy.linalg import norm
 from math import exp
@@ -12,9 +19,7 @@ from math import exp
 num_clusters = 9
 sigma_sq = .03
 
-D = np.zeros(A.shape)
-for i in range(A.shape[0]):
-    D[i,i] = np.sum(A[i,:])
+D = csc_matrix(np.diag(np.sum(A, axis=0).A1))
 
 print ('D done')
 
@@ -22,22 +27,22 @@ print ('D done')
 #   L = D^{-1/2} A D^{-1/2} --> L[i,j] = -A[i,j]/sqrt(d_i * d_j)
 
 # D^{-1/2}:
-Dinvsq = np.sqrt(np.linalg.inv(D))
+Dinvsq = np.sqrt(inv(D))
 
-print ('1')
+print ('Inv done')
 
-L = np.dot(Dinvsq, D-A)
-L = np.dot(L, Dinvsq)
+L = (D-A).dot(Dinvsq)
+L = Dinvsq.dot(L)
 #L = np.identity(len(A)) - L
-
+print ('L done')
 # print(L)
 # print(np.isclose(L[0,1], -A[0,1]/np.sqrt(D[1,1]*D[0,0])))
 
 # Find the K largest eigenvectors of L
-eigvals, eigvects = np.linalg.eigh(L)
-# eigvals, eigvects = ling.eigs(L, k=11)
+# eigvals, eigvects = np.linalg.eigh(L)
+eigvals, eigvects = ling.eigs(L, k=num_clusters)
 
-print ('2')
+print ('Eigen done')
 
 best_eigens = []
 for i in range(L.shape[0]):
@@ -70,19 +75,18 @@ from collections import defaultdict
 label2ind = defaultdict(list)
 for i, lab in enumerate(y_pred):
     label2ind[lab]+=[i]
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 
-img = mpimg.imread('test2.png')
+
+
 gray = rgb2gray(img)
 x_shape = gray.shape[0]
 y_shape = gray.shape[1]
-plot_gray(gray)
+# plot_gray(gray)
 for key, indices in label2ind.items():
     gray_clus = np.zeros(gray.shape)
     for ind in indices:
-        gray_clus[ind/y_shape, ind%y_shape] = gray[ind/y_shape, ind%y_shape]
-    plot_gray(gray_clus)
+        gray_clus[ind//y_shape, ind%y_shape] = gray[ind//y_shape, ind%y_shape]
+    plot_gray(gray_clus, img_name='Figure '+str(key), show=False)
 
 
 
