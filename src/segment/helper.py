@@ -4,7 +4,7 @@ import matplotlib.image as mpimg
 from scipy.sparse import csr_matrix, lil_matrix
 from scipy.spatial.distance import cosine, cdist
 from math import exp, hypot
-import cPickle as pickle
+import pickle
 from sklearn.neighbors import BallTree
 
 def rgb2gray(rgb):

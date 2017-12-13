@@ -1,4 +1,4 @@
-import cPickle as pickle
+import pickle
 from scipy.sparse import lil_matrix
 import numpy as np
 from helper import rgb2gray, plot_gray
