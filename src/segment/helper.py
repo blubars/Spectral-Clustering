@@ -28,9 +28,8 @@ def get_sim_bright_matrix(gray_mat):
     pix_values = np.ravel(gray_mat).reshape(-1,1)
     return cdist(pix_values, pix_values)
 
-def get_shi_affinity(dist_mat, bri_diff_mat, sigma_x=0.1, sigma_i=0.1, r=5):
-    valid_points = dist_mat < r
-    aff_mat = np.exp(-dist_mat**2//(sigma_x**2))*np.exp(-bri_diff_mat**2//(sigma_i**2))*valid_points
+def get_shi_affinity(dist_mat, bri_diff_mat, dis_ind_mat, sigma_x=0.1, sigma_i=0.1, r=5):
+    aff_mat = np.exp(-dist_mat**2/(sigma_x**2))*np.exp(-bri_diff_mat**2/(sigma_i**2))*dis_ind_mat
     print ('Got affinity matrix')
     return aff_mat
 
@@ -76,12 +75,16 @@ def image2affinity(image_file, r=5):
     gray = rgb2gray(img)
     dist_mat = get_distance_matrix(gray.shape[0], gray.shape[1])
     sigm_x = np.std(dist_mat)
+    dis_ind_mat = csr_matrix(dist_mat < r)
+    dist_mat = dis_ind_mat.multiply(np.exp(-dist_mat ** 2 / (sigm_x ** 2)))
     print ("sigma_x = " + str(sigm_x))
     # sigm_x = 26.38314
     bri_mat = get_sim_bright_matrix(gray)
     sig_i = np.std(bri_mat)
+    bri_mat = dis_ind_mat.multiply(np.exp(-bri_mat ** 2 / (sig_i ** 2)))
     print ("sigma_i = " + str(sig_i))
-    aff_mat = get_shi_affinity(dist_mat, bri_mat, sigm_x, sig_i, r=5)
+    aff_mat = dist_mat.multiply(bri_mat)
+    print ('got sparse')
     return aff_mat
 
 if __name__=='__main__':
@@ -90,23 +93,15 @@ if __name__=='__main__':
     # # plot_gray(gray)
     dist_mat = get_distance_matrix(gray.shape[0], gray.shape[1])
     sigm_x = np.std(dist_mat)
-    print (sigm_x)
+    dis_ind_mat = csr_matrix(dist_mat < 5)
+    dist_mat = dis_ind_mat.multiply(np.exp(-dist_mat**2/(sigm_x**2)))
+    print ("sigma_x = " + str(sigm_x))
     # sigm_x = 26.38314
     bri_mat = get_sim_bright_matrix(gray)
     sig_i = np.std(bri_mat)
-    # sig_i = 0.35589
-    # sig_i = np.std(gray)
-    # print (sigm_x)
-    # sig_i = 0.33
-    print (sig_i)
-    # pickle.dump(dist_mat, open('dist.mat', 'wb'))
-    #
-    # # sim_bri_mat = get_sim_bright_matrix(gray)
-    # # pickle.dump(sim_bri_mat, open('sim_bri.mat', 'wb'))
-    #
-    print ('sigx = ' + str(sigm_x))
-    print ('sig1 = ' + str(sig_i))
-    aff_mat = get_shi_affinity(dist_mat, bri_mat, sigm_x, sig_i, r=5)
+    bri_mat = dis_ind_mat.multiply(np.exp(-bri_mat**2/(sig_i**2)))
+    print ("sigma_i = " + str(sig_i))
+    aff_mat = dist_mat.multiply(bri_mat)
     print ('got sparse')
     # aff_mat = get_shi_nearest_neighbour(gray, sigma_i=sig_i, sigma_x=sigm_x, r=5, k=1000)
     pickle.dump(aff_mat, open('aff5.mat', 'wb'))
