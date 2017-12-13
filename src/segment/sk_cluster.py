@@ -3,12 +3,14 @@ from helper import rgb2gray, plot_gray, image2affinity
 import matplotlib.image as mpimg
 import cPickle as pickle
 import numpy as np
-
-image_file = 'test2.png'
-# aff_mat = pickle.load(open('aff3.mat', 'rb'))
-
+from scipy.sparse import csr_matrix
+image_file = 'test3.png'
+# aff_mat = pickle.load(open('aff4.mat', 'rb'))
 aff_mat = image2affinity(image_file, r=5)
 
+print ("converting to sparse")
+aff_mat = csr_matrix(aff_mat)
+print ("converted. running SC")
 cluster = SpectralClustering(n_clusters=10, affinity='precomputed', eigen_solver='amg')
 y_pred = cluster.fit_predict(aff_mat)
 

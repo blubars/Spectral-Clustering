@@ -4,7 +4,7 @@ import numpy as np
 from helper import rgb2gray, plot_gray
 import scipy.sparse.linalg as ling
 
-A = pickle.load(open('aff3.mat', 'rb')).todense()
+A = pickle.load(open('aff5.mat', 'rb')).todense()
 
 from numpy.linalg import norm
 from math import exp
