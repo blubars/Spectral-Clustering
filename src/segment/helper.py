@@ -45,8 +45,7 @@ def get_shi_affinity(gray_mat, sigma_i=0.1, sigma_x=0.1, r=5):
     n_pixels = shape_x*shape_y
     affinity_matrix = lil_matrix((n_pixels, n_pixels))
     for i in range(n_pixels-1):
-        x_i = (i/shape_y, i%shape_y)
-        print(x_i[0], x_i[1])
+        x_i = (i//shape_y, i%shape_y)
         gray_i = gray_mat[x_i[0], x_i[1]]
         print (i)
         for j in range(i+1, n_pixels):
