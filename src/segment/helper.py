@@ -13,9 +13,12 @@ def rgb2gray(rgb):
 def distance(x_i, x_j):
     return hypot(x_i[0] - x_j[0], x_i[1]-x_j[1])
 
-def plot_gray(gray_mat):
+def plot_gray(gray_mat, img_name, show=True):
     plt.imshow(gray_mat, cmap=plt.get_cmap('gray'))
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.savefig(img_name + '.png')
 
 def get_distance_matrix(n_rows, n_cols):
     points = np.array([(i,j) for i in range(n_rows) for j in range(n_cols)])
