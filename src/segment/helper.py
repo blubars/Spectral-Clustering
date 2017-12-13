@@ -27,7 +27,7 @@ def get_sim_bright_matrix(gray_mat):
 
 def get_shi_affinity(dist_mat, bri_diff_mat, sigma_x=0.1, sigma_i=0.1, r=5):
     valid_points = dist_mat < r
-    aff_mat = np.exp(-dist_mat**2/(sigma_x**2))*np.exp(-bri_diff_mat**2/(sigma_i**2))*valid_points
+    aff_mat = np.exp(-dist_mat**2//(sigma_x**2))*np.exp(-bri_diff_mat**2//(sigma_i**2))*valid_points
     print ('Got affinity matrix')
     return aff_mat
 
@@ -61,8 +61,8 @@ def get_shi_nearest_neighbour(gray_mat, sigma_i=0.1, sigma_x=0.1, r=5, k=5):
             x_i, y_i = point
             x_j, y_j = points[npoint, :]
             gray_dis = gray_mat[x_i, y_i] - gray_mat[x_j, y_j]
-            affinity_matrix[x_i, y_i] = exp(-(dis**2)/(sigma_x**2)) * \
-                exp(-(gray_dis**2)/(sigma_i**2))
+            affinity_matrix[x_i, y_i] = exp(-(dis**2)//(sigma_x**2)) * \
+                exp(-(gray_dis**2)//(sigma_i**2))
             affinity_matrix[y_i, x_i] = affinity_matrix[x_i, y_i]
     return affinity_matrix
 
