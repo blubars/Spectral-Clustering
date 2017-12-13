@@ -49,7 +49,7 @@ def get_shi_affinity(gray_mat, sigma_i=0.1, sigma_x=0.1, r=5):
         gray_i = gray_mat[x_i[0], x_i[1]]
         print (i)
         for j in range(i+1, n_pixels):
-            x_j = (j/shape_y, j%shape_y)
+            x_j = (j//shape_y, j%shape_y)
             dis = distance(x_i, x_j)
             gray_j = gray_mat[x_j[0], x_j[1]]
             if dis < r:
