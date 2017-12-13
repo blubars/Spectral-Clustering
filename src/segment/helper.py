@@ -4,7 +4,7 @@ import matplotlib.image as mpimg
 from scipy.sparse import csr_matrix, lil_matrix
 from scipy.spatial.distance import cosine
 from math import exp, hypot
-import cPickle as pickle
+import pickle
 
 def rgb2gray(rgb):
     return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
@@ -46,6 +46,7 @@ def get_shi_affinity(gray_mat, sigma_i=0.1, sigma_x=0.1, r=5):
     affinity_matrix = lil_matrix((n_pixels, n_pixels))
     for i in range(n_pixels-1):
         x_i = (i/shape_y, i%shape_y)
+        print(x_i[0], x_i[1])
         gray_i = gray_mat[x_i[0], x_i[1]]
         print (i)
         for j in range(i+1, n_pixels):

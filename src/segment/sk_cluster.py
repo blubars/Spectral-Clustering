@@ -1,7 +1,7 @@
 from sklearn.cluster import SpectralClustering
 from helper import rgb2gray, plot_gray, image2affinity
 import matplotlib.image as mpimg
-import cPickle as pickle
+import pickle
 import numpy as np
 
 image_file = 'test2.png'
