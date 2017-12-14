@@ -3,7 +3,7 @@ from scipy.sparse import lil_matrix
 import numpy as np
 from helper import rgb2gray, plot_gray, image2affinity
 import scipy.sparse.linalg as ling
-from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse import csr_matrix, csc_matrix, identity
 from scipy.sparse.linalg import inv
 
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ from math import exp
 num_clusters = 9
 sigma_sq = .03
 
-D = csc_matrix(np.diag(np.sum(A, axis=0).A1))
+D = csc_matrix(np.diag(np.sum(A, axis=1).A1))
 
 print ('D done')
 
@@ -27,12 +27,15 @@ print ('D done')
 #   L = D^{-1/2} A D^{-1/2} --> L[i,j] = -A[i,j]/sqrt(d_i * d_j)
 
 # D^{-1/2}:
+# Dinvsq = inv(D)
 Dinvsq = np.sqrt(inv(D))
 
 print ('Inv done')
+L = identity(D.shape[0]) - Dinvsq.dot(A)
+# L = D-A
+# L = Dinvsq.dot(L)
+# L = L.dot(Dinvsq)
 
-L = (D-A).dot(Dinvsq)
-L = Dinvsq.dot(L)
 #L = np.identity(len(A)) - L
 print ('L done')
 # print(L)
@@ -45,20 +48,11 @@ eigvals, eigvects = ling.eigs(L, k=num_clusters)
 print ('Eigen done')
 
 best_eigens = []
-for i in range(L.shape[0]):
-    #if np.isclose(eigvals[i], 1):
-    if 0:
-        continue
-    else:
-        if len(best_eigens) == num_clusters:
-            break
-        else:
-            best_eigens.append(i)
-print(best_eigens)
+
 
 # TODO: verify not 1, and verify orthogonal
 LX = eigvects[:, range(num_clusters)]
-LX = LX/np.sum(LX, axis=0)
+LX = LX/np.linalg.norm(LX, axis=1).reshape(-1,1)
 # print(LX)
 from sklearn.cluster import KMeans
 # verify: L v = \lamda v

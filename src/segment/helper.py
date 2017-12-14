@@ -63,8 +63,8 @@ def get_shi_nearest_neighbour(gray_mat, sigma_i=0.1, sigma_x=0.1, r=5, k=5):
             x_i, y_i = point
             x_j, y_j = points[npoint, :]
             gray_dis = gray_mat[x_i, y_i] - gray_mat[x_j, y_j]
-            affinity_matrix[x_i, y_i] = exp(-(dis**2)//(sigma_x**2)) * \
-                exp(-(gray_dis**2)//(sigma_i**2))
+            affinity_matrix[x_i, y_i] = exp(-(dis**2)/(sigma_x**2)) * \
+                exp(-(gray_dis**2)/(sigma_i**2))
             affinity_matrix[y_i, x_i] = affinity_matrix[x_i, y_i]
     return affinity_matrix
 
@@ -75,13 +75,15 @@ def image2affinity(image_file, r=5):
     gray = rgb2gray(img)
     dist_mat = get_distance_matrix(gray.shape[0], gray.shape[1])
     sigm_x = np.std(dist_mat)
+    # sigm_x = 4.
     dis_ind_mat = csr_matrix(dist_mat < r)
-    dist_mat = dis_ind_mat.multiply(np.exp(-dist_mat ** 2 // (sigm_x ** 2)))
+    dist_mat = dis_ind_mat.multiply(np.exp(-dist_mat ** 2 / (sigm_x ** 2)))
     print ("sigma_x = " + str(sigm_x))
     # sigm_x = 26.38314
     bri_mat = get_sim_bright_matrix(gray)
     sig_i = np.std(bri_mat)
-    bri_mat = dis_ind_mat.multiply(np.exp(-bri_mat ** 2 // (sig_i ** 2)))
+    # sig_i = 0.1
+    bri_mat = dis_ind_mat.multiply(np.exp(-bri_mat ** 2 / (sig_i ** 2)))
     print ("sigma_i = " + str(sig_i))
     aff_mat = dist_mat.multiply(bri_mat)
     print ('got sparse')
