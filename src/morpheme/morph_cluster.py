@@ -48,7 +48,11 @@ def get_affinity(vocab, wv):
 
   return A
   """
-  return wv.dot(wv.T)
+  A = wv.dot(wv.T)
+  sigma = np.std(A)
+  print("Sigma: %f" % sigma)
+  return np.exp(-A**2/(sigma**2))
+  #return np.divide(wv.dot(wv.T), sigma)
 
 
 
@@ -71,11 +75,10 @@ if __name__=='__main__':
   Try Sklearn spectral clustering
   """
   A = get_affinity(vocab, wv)
+  cluster = SpectralClustering(n_clusters=num_clusters, affinity='precomputed', eigen_solver='amg', n_init=20)
+  sk_spec = cluster.fit(A)
 
-  cluster = SpectralClustering(n_clusters=num_clusters, affinity='precomputed', eigen_solver='amg')
-  y_pred = cluster.fit_predict(A)
-
-  plot_results(X, vocab, y_pred, 2, "english characters")
+  plot_results(X, vocab, sk_spec.labels_, 2, "english characters")
 
   """
   SAME EXPERIMENT WITH OUR SPECTRAL CLUSTERING ALGORITHM
