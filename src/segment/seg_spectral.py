@@ -11,12 +11,12 @@ import matplotlib.image as mpimg
 
 image_file = 'trivedi.png'
 img = mpimg.imread(image_file)
-A = image2affinity(image_file, r=15)
+A = image2affinity(image_file, r=10)
 
 from numpy.linalg import norm
 from math import exp
 
-num_clusters = 7
+num_clusters = 5
 sigma_sq = .03
 
 D = csc_matrix(np.diag(np.sum(A, axis=1).A1))
