@@ -5,6 +5,7 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
+import gensim
 from gensim.models.word2vec import Word2Vec
 
 project_root = "/Users/ajwieme/Spectral-Clustering"
@@ -29,11 +30,23 @@ def plot_results(X, ann_labels, y, fignum, title):
         plt.annotate(label, xy=(x, y), xytext=(0, 0), textcoords='offset points')
     plt.show()
 
+
+
+def get_affinity(vocab, model):
+  A = np.zeros([len(vocab), len(vocab)])
+  for i, v1 in enumerate(vocab):
+    for j, v2 in enumerate(vocab):
+      A[i, j] = model.similarity(v1, v2)
+
+  return A
+
 if __name__=='__main__':
   model = Word2Vec.load(project_root + "/character-embeddings/english")
 
   wv = model[model.wv.vocab]
   vocab = model.wv.vocab.keys()
+  print(get_affinity(vocab, model))
+  break
 
   km = KMeans(n_clusters=2, n_init=20)
   km.fit_predict(wv)
@@ -46,6 +59,3 @@ if __name__=='__main__':
   """
   SAME EXPERIMENT WITH OUR SPECTRAL CLUSTERING ALGORITHM
   """
-
-  def get_affinity():
-    return np.Matrix()
