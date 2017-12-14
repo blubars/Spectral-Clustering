@@ -81,60 +81,95 @@ def plot_subplots(fignum, subplot_list):
 #    This is the vanilla implementation from Ng-Jordan-Weiss
 ###############################################################
 class SpectralClustering:
-    def __init__(self, num_clusters, sigma_sq=0.1, debug=False):
+    def __init__(self, num_clusters, sigma_sq=None, debug=False):
         self.num_clusters = num_clusters
         self.sigma_sq = sigma_sq
+        self.scale_affinity = 1
         self._debug = debug
         self._L = None
         self._LX = None
         self._labels = None
 
-    def gaus_affinity_kernel(self, x1, x2):
-        # compute the affinity of samples X1, X2
-        return exp(-(norm(x1-x2)**2)/(2*self.sigma_sq))
+    def fit_params(self, X):
+        if self.sigma_sq is None:
+            self.sigma_sq = self.guess_sigma_sq(X)
+        if self.sigma_sq < 1:
+            # scale values to avoid numerical instability
+            self.scale_affinity = 1 / self.sigma_sq
 
     def fit_predict(self, X):
         return self.fit(X)
 
     def fit(self, X):
+        # (0) -------
+        # Set up data autoparams if missing
+        self.fit_params(X)
         # (1) -------
         # construct affinity matrix
-        A = np.zeros((len(X), len(X)))
-        for i in range(len(X)-1):
-            for j in range(i+1, len(X)):
-                A[i,j] = self.gaus_affinity_kernel(X[i], X[j])
-                A[j,i] = A[i,j]
-        if self._debug:
-            # print affinity matrix
-            np.set_printoptions(precision=3)
-            print(A)
+        A = self.make_affinity(X)
         # (2) -------
-        # Construct diagonal degree matrix
-        D = np.zeros(A.shape)
-        for i in range(A.shape[0]):
-            D[i,i] = np.sum(A[i,:])
-        # (3) -------
         # Construct Laplacian matrix
-        L = self.make_laplacian(D, A)
-        # (4) -------
+        L = self.make_laplacian(A)
+        # (3) -------
         # Find the K largest eigenvectors of L
         LX = self.make_eigenvector_matrix(L)
-        # (5) -------
+        # (4) -------
         # Finally, do clustering on reduced space using KMeans:
         km = KMeans(n_clusters=2, n_init=20)
         km.fit(LX)
         self._labels = km.labels_
+        self.auto_eval_cluster()
         return self._labels
 
-    def make_laplacian(self, D, A):
+
+    def auto_eval_cluster(self):
+        # 'cluster quality' can be approximated by tightness of
+        # clustering in transformed eigenspace.
+        stdlist = []
+        for c in range(self.num_clusters):
+            std = np.std(self._LX[self._labels == c], axis=0)
+            stdlist.append(np.average(std))
+        #print("Std dev of clusters: {}".format(stdlist))
+        if np.average(stdlist) > 0.1:
+            print("High std deviation in embedded space, maybe try smaller sigma")
+
+
+    def guess_sigma_sq(self, X):
+        var = np.var(X) / self.num_clusters**2
+        print("Guessing variance:{}".format(var))
+        return var
+
+    def gaus_affinity_kernel(self, x1, x2):
+        # compute the affinity of samples X1, X2
+        # scale values to avoid numerical instability
+        gaus = exp(-(norm(x1-x2)**2)/(2*self.sigma_sq))
+        return self.scale_affinity * gaus
+
+    def make_affinity(self, X, kernel=None):
+        if kernel is None:
+            kernel = self.gaus_affinity_kernel
+        A = np.zeros((len(X), len(X)))
+        for i in range(len(X)-1):
+            for j in range(i+1, len(X)):
+                A[i,j] = kernel(X[i], X[j])
+                A[j,i] = A[i,j]
+        if self._debug:
+            # print affinity matrix
+            np.set_printoptions(precision=2)
+            print(A)
+        return A
+
+    def make_laplacian(self, A):
         # Construct Laplacian Matrix:
         #   L = D^{-1/2} A D^{-1/2} -->
         #   L[i,j] = -A[i,j]/sqrt(d_i * d_j)
-        Dinvsq = np.sqrt(np.linalg.inv(D))
-        L = np.dot(Dinvsq, A)
+        # D = diagonal degree matrix
+        D = np.diag(np.sum(A, axis=0))
+        # construct normalized laplacian
+        Dinvsq = np.sqrt(np.linalg.inv(D)) * 1000
+        L = np.dot(Dinvsq, D - A)
         L = np.dot(L, Dinvsq)
         self._L = L
-        #L = np.identity(len(A)) - L
         if self._debug:
             print("Laplacian:")
             print(L)
@@ -146,21 +181,17 @@ class SpectralClustering:
         # to use for spectral clustering, construct matrix
         # out of eigenvectors, normalize, and return
         eigvals, eigvects = np.linalg.eigh(L)
-        best_eigens = []
-        for i in range(L.shape[0]-1,0,-1):
-            if len(best_eigens) == self.num_clusters:
-                break
-            else:
-                best_eigens.append(i)
+        best_eigens = [i for i in range(self.num_clusters)]
         if self._debug:
             print("Best eigenvalues: {}".format(best_eigens))
-        # TODO: verify orthogonal
-        LX = np.zeros((L.shape[0], self.num_clusters))
-        for i in range(self.num_clusters):
-            LX[:,i] = eigvects[:,best_eigens[i]]
+        LX = np.array(eigvects[:,best_eigens])
+        # verify orthogonal
+        for i in range(self.num_clusters-1):
+            for j in range(i+1, self.num_clusters):
+                if not np.isclose(np.dot(LX[:,i], LX[:,j]), 0):
+                    print("WARNING: eigenvectors {},{} not orthogonal!".format(i,j))
         # normalize new eigenvector-column-matrix
-        for row in range(len(LX)):
-            LX[row,:] = LX[row,:] / np.linalg.norm(LX[row,:])
+        LX = (LX.T / np.linalg.norm(LX, axis=1)).T
         self._LX = LX
         if self._debug:
             print(LX)
@@ -171,63 +202,6 @@ class SpectralClustering:
             #print(np.isclose(np.dot(L,eigvects[:,1]), 
             #                 eigvals[1]*eigvects[:,1]))
         return LX
-
-
-###############################################################
-#  CLASS: PROPER LAPLACIAN SPECTRAL CLUSTERING
-#    The Ng-Jordan-Weiss algorithm changes the laplacian
-#    slightly by not subtracting from the identity matrix.
-#    They say this won't change the result, just the eigenvalues.
-#    Here, just making sure. (CONFIRMED!)
-###############################################################
-class ProperLaplacianSpectralClustering(SpectralClustering):
-    def make_laplacian(self, D, A):
-        print("Building alternate laplacian: L = I - D^{-1/2} A D^{-1/2}")
-        # Construct Laplacian Matrix:
-        #   L = D^{-1/2} A D^{-1/2} -->
-        #   L[i,j] = -A[i,j]/sqrt(d_i * d_j)
-        Dinvsq = np.sqrt(np.linalg.inv(D))
-        L = np.dot(Dinvsq, A)
-        L = np.dot(L, Dinvsq)
-        self._L = L
-        L = np.identity(len(A)) - L
-        if self._debug:
-            print("Laplacian:")
-            print(L)
-            print(np.isclose(L[0,1], -A[0,1]/np.sqrt(D[1,1]*D[0,0])))
-        return L
-
-    def make_eigenvector_matrix(self, L):
-        # find eigenvalues/eigenvectors, pick best ones
-        # to use for spectral clustering, construct matrix
-        # out of eigenvectors, normalize, and return
-        eigvals, eigvects = np.linalg.eigh(L)
-        best_eigens = []
-        for i in range(L.shape[0]):
-            if len(best_eigens) == self.num_clusters:
-                break
-            else:
-                best_eigens.append(i)
-        if self._debug:
-            print("Best eigenvalues: {}".format(best_eigens))
-        # TODO: verify orthogonal
-        LX = np.zeros((L.shape[0], self.num_clusters))
-        for i in range(self.num_clusters):
-            LX[:,i] = eigvects[:,best_eigens[i]]
-        # normalize new eigenvector-column-matrix
-        for row in range(len(LX)):
-            LX[row,:] = LX[row,:] / np.linalg.norm(LX[row,:])
-        self._LX = LX
-        if self._debug:
-            print(LX)
-            # verify: L v = \lamda v
-            print("Eigenvalues:")
-            print(eigvals)
-            #print("Verify an eigenvector + eigenvalue")
-            #print(np.isclose(np.dot(L,eigvects[:,1]), 
-            #                 eigvals[1]*eigvects[:,1]))
-        return LX
-
 
 ###############################################################
 #  MAIN: Test on toy datasets and plot
@@ -235,11 +209,6 @@ class ProperLaplacianSpectralClustering(SpectralClustering):
 def main():
     datasets = generate_datasets()
     X, y = datasets[0]
-
-    print("Fitting new model")
-    model = ProperLaplacianSpectralClustering(num_clusters=2, sigma_sq=0.01)
-    y_pred = model.fit_predict(X)
-    plot_results(X, y_pred, 1, "alternate")
 
     print("Running spectral clustering")
     model = SpectralClustering(num_clusters=2, sigma_sq=0.01)
@@ -251,7 +220,6 @@ def main():
     add_subplot(plots, model._LX, y_pred, 
                 "Spectral clustering:\nembedded domain",
                 plot_type='sc-circle')
-                #limits=([-1.2, 1.2],[-1.2,1.2]))
     add_subplot(plots, X, y_pred, 
                 "Spectral clustering:\noriginal domain")
     plot_subplots(1, plots)
