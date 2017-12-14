@@ -34,7 +34,8 @@ def plot_results(X, ann_labels, y, fignum, title):
         plt.annotate(label, xy=(x, y), xytext=(0, 0), textcoords='offset points')
     plt.show()
 
-def get_affinity(vocab, model):
+def get_affinity(vocab, wv):
+  """
   A = np.zeros([len(vocab), len(vocab)])
   for i, v1 in enumerate(vocab):
     for j, v2 in enumerate(vocab):
@@ -42,8 +43,13 @@ def get_affinity(vocab, model):
         A[i, j] = 0.0
       else:
         A[i, j] = model.similarity(v1, v2)
+  sigma = np.std(A)
+  A = np.divide(A, sigma)
 
   return A
+  """
+  return wv.dot(wv.T)
+
 
 
 if __name__=='__main__':
@@ -64,8 +70,9 @@ if __name__=='__main__':
   """
   Try Sklearn spectral clustering
   """
-  A = get_affinity(vocab, model)
-  cluster = SpectralClustering(n_clusters=2, affinity='precomputed', eigen_solver='amg')
+  A = get_affinity(vocab, wv)
+
+  cluster = SpectralClustering(n_clusters=num_clusters, affinity='precomputed', eigen_solver='amg')
   y_pred = cluster.fit_predict(A)
 
   plot_results(X, vocab, y_pred, 2, "english characters")
@@ -73,7 +80,7 @@ if __name__=='__main__':
   """
   SAME EXPERIMENT WITH OUR SPECTRAL CLUSTERING ALGORITHM
   """
-  A = get_affinity(vocab, model)
+  A = get_affinity(vocab, wv)
   # Sparse matrix of the diagonal
   D = csc_matrix(np.diag(np.ravel(np.sum(A, axis=1))))
 
