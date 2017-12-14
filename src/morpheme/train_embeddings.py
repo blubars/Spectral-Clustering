@@ -8,12 +8,12 @@ GERMANIC = ['norwegian-bokmal', 'english', 'icelandic', 'norwegian-nynorsk', 'du
 URALIC = ['hungarian', 'northern-sami', 'finnish', 'estonian']
 
 def get_words(FN):
-  IGNORE = ["*"]
+  KEEP = "abcdefghijklmnopqrstuvwxyz"
   # Get each in the tab delimited string on each line
   data = [l.strip().split('\t') for l in codecs.open(FN, 'r', 'utf-8') if l.strip() != '']
   # Let's use the lemma, and the inflected word form
-  word_forms = [[c.lower() for c in w if c not in IGNORE] for lemma, wf, tags in data for w in wf.split(' ')]
-  lemmas = [[c.lower() for c in w if c not in IGNORE] for lemma, wf, tags in data for w in lemma.split(' ')]
+  word_forms = [[c.lower() for c in w] for lemma, wf, tags in data for w in wf.split(' ') if len([c for c in w if c in KEEP]) == len(w)]
+  lemmas = [[c.lower() for c in w] for lemma, wf, tags in data for w in lemma.split(' ') if len([c for c in w if c in KEEP]) == len(w)]
 
   return word_forms + lemmas
 
@@ -27,6 +27,7 @@ if __name__=='__main__':
       # Each have 300 dimensions and capture characters w/in 5 characters of the embedded one
       words += get_words(fn)
 
+    print("training on %i words" % len(words))
     print(words)
     model = Word2Vec(words, size=300, window=1, min_count=1)
     print("saving %s..." % lang)
