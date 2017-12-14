@@ -9,14 +9,14 @@ from scipy.sparse.linalg import inv
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
-image_file = 'test3.png'
+image_file = 'trivedi.png'
 img = mpimg.imread(image_file)
 A = image2affinity(image_file, r=15)
 
 from numpy.linalg import norm
 from math import exp
 
-num_clusters = 9
+num_clusters = 7
 sigma_sq = .03
 
 D = csc_matrix(np.diag(np.sum(A, axis=1).A1))
