@@ -35,16 +35,17 @@ if __name__=='__main__':
   wv = model[model.wv.vocab]
   vocab = model.wv.vocab.keys()
 
+  km = KMeans(n_clusters=2, n_init=20)
+  km.fit_predict(wv)
+
   tsne = TSNE(n_components=2, random_state=0)
   X = tsne.fit_transform(wv)
-
-  plt.scatter(X[:, 0], X[:, 1])
-
-  km = KMeans(n_clusters=2, n_init=20)
-  km.fit_predict(X)
 
   plot_results(X, vocab, km.labels_, 1, "english characters")
 
   """
   SAME EXPERIMENT WITH OUR SPECTRAL CLUSTERING ALGORITHM
   """
+
+  def get_affinity():
+    return np.Matrix()
