@@ -9,9 +9,13 @@ from scipy.sparse.linalg import inv
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
+<<<<<<< HEAD
 image_file = 'trivedi.png'
+=======
+image_file = 'ashu.png'
+>>>>>>> d9fa6a3aec95e6f4248ecd61b701327b11d9d530
 img = mpimg.imread(image_file)
-A = image2affinity(image_file, r=15)
+A = image2affinity(image_file, r=10)
 
 from numpy.linalg import norm
 from math import exp
@@ -31,11 +35,12 @@ print ('D done')
 Dinvsq = np.sqrt(inv(D))
 
 print ('Inv done')
-L = identity(D.shape[0]) - Dinvsq.dot(A)
-# L = D-A
-# L = Dinvsq.dot(L)
-# L = L.dot(Dinvsq)
-
+# L = identity(D.shape[0]) - Dinvsq.dot(A)
+L = D-A
+L = Dinvsq.dot(L)
+L = L.dot(Dinvsq)
+n = L.shape[0]
+print n
 #L = np.identity(len(A)) - L
 print ('L done')
 # print(L)
@@ -43,16 +48,17 @@ print ('L done')
 
 # Find the K largest eigenvectors of L
 # eigvals, eigvects = np.linalg.eigh(L)
-eigvals, eigvects = ling.eigs(L, k=num_clusters)
-
+print L.ndim
+eigvals, eigvects = ling.eigs(L, k=num_clusters, which='SM')
+LX = Dinvsq.dot(eigvects)
 print ('Eigen done')
 
 best_eigens = []
 
 
 # TODO: verify not 1, and verify orthogonal
-LX = eigvects[:, range(num_clusters)]
-LX = LX/np.linalg.norm(LX, axis=1).reshape(-1,1)
+# LX = eigvects[:, range(num_clusters)]
+# LX = LX/np.linalg.norm(LX, axis=1).reshape(-1,1)
 # print(LX)
 from sklearn.cluster import KMeans
 # verify: L v = \lamda v
@@ -80,7 +86,7 @@ for key, indices in label2ind.items():
     gray_clus = np.zeros(gray.shape)
     for ind in indices:
         gray_clus[ind//y_shape, ind%y_shape] = gray[ind//y_shape, ind%y_shape]
-    plot_gray(gray_clus, img_name='Figure '+str(key), show=False)
+    plot_gray(gray_clus, img_name='Figure_a '+str(key), show=False)
 
 
 
