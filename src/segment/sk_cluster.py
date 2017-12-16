@@ -6,14 +6,14 @@ import matplotlib.image as mpimg
 import pickle
 import numpy as np
 from scipy.sparse import csr_matrix
-image_file = 'test3.png'
+image_file = 'trivedi.png'
 # aff_mat = pickle.load(open('aff4.mat', 'rb'))
 aff_mat = image2affinity(image_file, r=5)
 
 # print ("converting to sparse")
 # aff_mat = csr_matrix(aff_mat)
 print ("running SC")
-cluster = SpectralClustering(n_clusters=10, affinity='precomputed', eigen_solver='amg')
+cluster = SpectralClustering(n_clusters=7, affinity='precomputed', eigen_solver='amg')
 y_pred = cluster.fit_predict(aff_mat)
 
 from collections import defaultdict
