@@ -8,12 +8,13 @@ GERMANIC = ['norwegian-bokmal', 'english', 'icelandic', 'norwegian-nynorsk', 'du
 URALIC = ['hungarian', 'northern-sami', 'finnish', 'estonian']
 
 def get_words(FN):
-  KEEP = "abcdefghijklmnopqrstuvwxyz"
+  #KEEP_ENGLISH = "abcdefghijklmnopqrstuvwxyz"
+  KEEP_FINNISH = ['o', 'l', 'e', 'm', 'a', 'i', 'k', 'u', 'n', 't', 'v', 'r', 's', 'y', 'ä', 'j', 'ö', 'h', 'p', 'd', 'g', 'c', 'f', 'b', 'š', '-', '\xa0', 'w', 'z', 'é', 'x', ':', 'q', 'ž', 'å']
   # Get each in the tab delimited string on each line
   data = [l.strip().split('\t') for l in codecs.open(FN, 'r', 'utf-8') if l.strip() != '']
   # Let's use the lemma, and the inflected word form
-  word_forms = [[c.lower() for c in w] for lemma, wf, tags in data for w in wf.split(' ') if len([c for c in w if c in KEEP]) == len(w)]
-  lemmas = [[c.lower() for c in w] for lemma, wf, tags in data for w in lemma.split(' ') if len([c for c in w if c in KEEP]) == len(w)]
+  word_forms = [[c.lower() for c in w] for lemma, wf, tags in data for w in wf.split(' ') if len([c for c in w if c in KEEP_FINNISH]) == len(w)]
+  lemmas = [[c.lower() for c in w] for lemma, wf, tags in data for w in lemma.split(' ') if len([c for c in w if c in KEEP_FINNISH]) == len(w)]
 
   return word_forms + lemmas
 

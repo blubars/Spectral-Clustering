@@ -58,10 +58,11 @@ def get_affinity(vocab, wv):
 
 if __name__=='__main__':
   num_clusters = 2
-  model = Word2Vec.load(project_root + "/character-embeddings/english")
+  model = Word2Vec.load(project_root + "/character-embeddings/finnish")
 
   wv = model[model.wv.vocab]
   vocab = model.wv.vocab.keys()
+  print(vocab)
 
   km = KMeans(n_clusters=num_clusters, n_init=20)
   km.fit_predict(wv)
