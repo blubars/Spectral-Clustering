@@ -17,6 +17,9 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 
+import scipy
+import pyamg
+
 plot_colors = ['#377eb8', '#ff7f00', '#4daf4a']
 
 ###############################################################
@@ -131,7 +134,7 @@ class SpectralClustering:
             stdlist.append(np.average(std))
         #print("Std dev of clusters: {}".format(stdlist))
         if np.average(stdlist) > 0.1:
-            print("High std deviation in embedded space, maybe try smaller sigma")
+            print("High std deviation (%.2f) in embedded space, maybe try smaller sigma" % np.average(stdlist))
 
 
     def guess_sigma_sq(self, X):
@@ -199,9 +202,101 @@ class SpectralClustering:
             print("Eigenvalues:")
             print(eigvals)
             #print("Verify an eigenvector + eigenvalue")
-            #print(np.isclose(np.dot(L,eigvects[:,1]), 
+            #print(np.isclose(np.dot(L,eigvects[:,1]),
             #                 eigvals[1]*eigvects[:,1]))
         return LX
+
+###############################################################
+#  CLASS: MORPHEME SPECTRAL CLUSTERING:
+#    This inherits from the vanilla implementation, and is tweaked for working
+#    with word/character embeddings
+
+###############################################################
+class WordEmbeddingsSpectralClustering(SpectralClustering):
+    def make_affinity(self, X, sigma=None, algorithm="gaussian"):
+        """
+        X is assumed to be the matrix of embeddings.
+
+        To compute the affinity matrix, we take the product of
+        that matrix and its transpose, and run it through a gaussian
+        """
+        if algorithm == "gaussian":
+            return self._make_gaussian(X, sigma)
+        elif algorithm == "epsilon-neighborhood":
+            return self._make_epsilon_neighborhood(X, sigma)
+        elif algorithm == "k-nearest-neighbors":
+            return self._make_k_nearest(X, sigma)
+
+    def _make_gaussian(self, X, sigma=None):
+        A = X.dot(X.T)
+        if sigma == None:
+            sigma = np.std(A)
+
+        return np.exp(-A**2/(sigma**2))
+
+    def _make_euclidean(self, X):
+        A = np.zeros((len(X), len(X)))
+
+        for i in range(len(X)-1):
+            for j in range(i+1, len(X)):
+                A[i,j] = np.linalg.norm(X[i]-X[j])
+                A[j,i] = A[i,j]
+
+        return A
+
+    def _make_epsilon_neighborhood(self, X, sigma=None):
+        def _find_epsilon(v):
+            EPSILON = 0.9
+            # Replace each with a 0 if it is less than the threshhold set by epsilon
+            return np.array([1.0 if s < EPSILON else 0.0 for s in v])
+
+        M = self._make_euclidean(X)
+        print(M)
+
+        print(np.apply_along_axis(_find_epsilon, 1, M))
+        return np.apply_along_axis(_find_epsilon, 1, M)
+
+
+    def make_eigenvector_matrix(self, A):
+        # Sparse matrix of the diagonal
+        D = np.diag(np.ravel(np.sum(A, axis=1)))
+        # square root of the inverse of the sparse amtrix D
+        Dinvsq = np.sqrt(np.linalg.inv(D))
+
+        L = D-A
+        L = Dinvsq.dot(L)
+        L = L.dot(Dinvsq)
+
+        # Find the K smallest eigenvectors of L
+        eigvals, eigvects = scipy.sparse.linalg.eigs(L, k=self.num_clusters, which='SM')
+        # ml = pyamg.smoothed_aggregation_solver(L, 'csr')
+        # M = ml.aspreconditioner()
+        # eigvals, eigvects = np.linalg.eigh(M)
+
+        # lowest_eigs = eigvects[:, :self.num_clusters]
+        # print("Found %i lowest Eigenvalues" % self.num_clusters)
+        # print(eigvals[:self.num_clusters])
+
+        LX = Dinvsq.dot(eigvects)
+        LX = (LX.T / np.linalg.norm(LX, axis=1)).T
+        self._LX = LX
+        print(LX)
+        return self._LX
+
+    def fit(self, X):
+        # Set up data autoparams if missing
+        self.fit_params(X)
+        # construct affinity matrix
+        A = self.make_affinity(X, algorithm="gaussian")
+        # Find the K largest eigenvectors of the Laplacian of A
+        LX = self.make_eigenvector_matrix(A)
+        # (4) -------
+        # Finally, do clustering on reduced space using KMeans:
+        km = KMeans(n_clusters=2, n_init=20)
+        km.fit(LX)
+        self._labels = km.labels_
+        self.auto_eval_cluster()
+        return self._labels
 
 ###############################################################
 #  MAIN: Test on toy datasets and plot
@@ -217,10 +312,10 @@ def main():
     # plot results
     plots = []
     add_subplot(plots, X, y, "Ground Truth")
-    add_subplot(plots, model._LX, y_pred, 
+    add_subplot(plots, model._LX, y_pred,
                 "Spectral clustering:\nembedded domain",
                 plot_type='sc-circle')
-    add_subplot(plots, X, y_pred, 
+    add_subplot(plots, X, y_pred,
                 "Spectral clustering:\noriginal domain")
     plot_subplots(1, plots)
 

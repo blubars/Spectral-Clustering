@@ -3,7 +3,7 @@ import codecs
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
-from sklearn.cluster import SpectralClustering
+from sklearn import cluster as skcluster
 import matplotlib.pyplot as plt
 
 import gensim
@@ -11,6 +11,11 @@ from gensim.models.word2vec import Word2Vec
 
 from scipy.sparse import csr_matrix, csc_matrix, identity, linalg
 from scipy.sparse.linalg import inv
+
+# Hacky way to get Brian's class in this dir
+import sys
+sys.path.append("..")
+from spectral_clustering import WordEmbeddingsSpectralClustering
 
 project_root = "/Users/ajwieme/Spectral-Clustering"
 
@@ -50,7 +55,6 @@ def get_affinity(vocab, wv):
   """
   A = wv.dot(wv.T)
   sigma = np.std(A)
-  print("Sigma: %f" % sigma)
   return np.exp(-A**2/(sigma**2))
   #return np.divide(wv.dot(wv.T), sigma)
 
@@ -70,39 +74,21 @@ if __name__=='__main__':
   tsne = TSNE(n_components=2, random_state=0)
   X = tsne.fit_transform(wv)
 
-  plot_results(X, vocab, km.labels_, 1, "english characters")
+  #plot_results(X, vocab, km.labels_, 1, "english characters")
 
   """
   Try Sklearn spectral clustering
   """
   A = get_affinity(vocab, wv)
-  cluster = SpectralClustering(n_clusters=num_clusters, affinity='precomputed', eigen_solver='amg', n_init=20)
+  cluster = skcluster.SpectralClustering(n_clusters=num_clusters, affinity='precomputed', eigen_solver='amg', n_init=20)
   sk_spec = cluster.fit(A)
 
-  plot_results(X, vocab, sk_spec.labels_, 2, "english characters")
+  plot_results(X, vocab, sk_spec.labels_, 2, "finnish characters")
 
   """
   SAME EXPERIMENT WITH OUR SPECTRAL CLUSTERING ALGORITHM
   """
-  A = get_affinity(vocab, wv)
-  # Sparse matrix of the diagonal
-  D = csc_matrix(np.diag(np.ravel(np.sum(A, axis=1))))
+  model = WordEmbeddingsSpectralClustering(num_clusters=2, sigma_sq=0.01)
+  model.fit_predict(wv)
 
-  # square root of the inverse of the sparse amtrix D
-  Dinvsq = np.sqrt(inv(D))
-  L = identity(D.shape[0]) - Dinvsq.dot(A)
-
-  # Find the K largest eigenvectors of L
-  # eigvals, eigvects = np.linalg.eigh(L)
-  eigvals, eigvects = linalg.eigs(L, k=num_clusters)
-
-  # Top k eigenvectors, normalized
-  LX = eigvects[:, range(num_clusters)]
-  LX = LX/np.linalg.norm(LX, axis=1).reshape(-1,1)
-
-  print("Eigenvalues:")
-  print(eigvals)
-
-  km2 = KMeans(n_clusters=num_clusters, n_init=20)
-  km2.fit(LX)
-  plot_results(X, vocab, km2.labels_, 3, "english characters")
+  plot_results(X, vocab, model._labels, 3, "Finnish Characters")
