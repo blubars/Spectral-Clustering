@@ -268,7 +268,9 @@ class WordEmbeddingsSpectralClustering(SpectralClustering):
         L = L.dot(Dinvsq)
 
         # Find the K smallest eigenvectors of L
-        eigvals, eigvects = scipy.sparse.linalg.eigs(L, k=self.num_clusters, which='SM')
+        ml = pyamg.smoothed_aggregation_solver(L, D)
+        M = ml.aspreconditioner()
+        eigvals, eigvects = scipy.sparse.linalg.eigs(M, k=self.num_clusters, which='SM')
         # ml = pyamg.smoothed_aggregation_solver(L, 'csr')
         # M = ml.aspreconditioner()
         # eigvals, eigvects = np.linalg.eigh(M)
