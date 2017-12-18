@@ -259,20 +259,23 @@ class WordEmbeddingsSpectralClustering(SpectralClustering):
 
     def make_eigenvector_matrix(self, A):
         # Sparse matrix of the diagonal
-        D = np.diag(np.ravel(np.sum(A, axis=1)))
+        D = scipy.sparse.csr_matrix(np.diag(np.ravel(np.sum(A, axis=1))))
         # square root of the inverse of the sparse amtrix D
-        Dinvsq = np.sqrt(np.linalg.inv(D))
+        Dinvsq = np.sqrt(scipy.sparse.linalg.inv(D))
 
-        L = D-A
+        L = D-scipy.sparse.csr_matrix(A)
         L = Dinvsq.dot(L)
         L = L.dot(Dinvsq)
 
+        print(type(L))
+
         # Find the K smallest eigenvectors of L
+        # Use this method from the multigrid solver
         ml = pyamg.smoothed_aggregation_solver(L, D)
+        # Perform multigrid 'preconditioning'
         M = ml.aspreconditioner()
+        # Find the k smallest eigenvalues and corresponding eigenvectos of the matrix
         eigvals, eigvects = scipy.sparse.linalg.eigs(M, k=self.num_clusters, which='SM')
-        # ml = pyamg.smoothed_aggregation_solver(L, 'csr')
-        # M = ml.aspreconditioner()
         # eigvals, eigvects = np.linalg.eigh(M)
 
         # lowest_eigs = eigvects[:, :self.num_clusters]
@@ -282,6 +285,7 @@ class WordEmbeddingsSpectralClustering(SpectralClustering):
         LX = Dinvsq.dot(eigvects)
         LX = (LX.T / np.linalg.norm(LX, axis=1)).T
         self._LX = LX
+        print(eigvals)
         print(LX)
         return self._LX
 

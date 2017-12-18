@@ -69,12 +69,13 @@ if __name__=='__main__':
   print(vocab)
 
   km = KMeans(n_clusters=num_clusters, n_init=20)
+  print(wv)
   km.fit_predict(wv)
 
   tsne = TSNE(n_components=2, random_state=0)
   X = tsne.fit_transform(wv)
 
-  #plot_results(X, vocab, km.labels_, 1, "english characters")
+  plot_results(X, vocab, km.labels_, 1, "english characters")
 
   """
   Try Sklearn spectral clustering
@@ -91,4 +92,4 @@ if __name__=='__main__':
   model = WordEmbeddingsSpectralClustering(num_clusters=2, sigma_sq=0.01)
   model.fit_predict(wv)
 
-  plot_results(X, vocab, model._labels, 3, "Finnish Characters")
+  #plot_results(X, vocab, model._labels, 3, "Finnish Characters")
