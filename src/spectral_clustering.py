@@ -16,19 +16,29 @@ from sklearn import datasets
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
+import scipy.linalg as sla
+import timeit
 
 plot_colors = ['#377eb8', '#ff7f00', '#4daf4a']
 
 ###############################################################
 #  UTILITY FUNCTIONS
 ###############################################################
-# create toy datasets for cluster experiments
-def generate_datasets(num_samples=100):
+# create toy datasets for cluster experiments: from sklearn
+def generate_datasets(num_samples=500):
     noisy_circles = datasets.make_circles(
             n_samples=num_samples, factor=0.5, noise=0.05)
     noisy_moons = datasets.make_moons(
             n_samples=num_samples, noise=0.05)
-    data = [noisy_circles, noisy_moons]
+    random_state = 170
+    X, y = datasets.make_blobs(n_samples=num_samples, random_state=random_state)
+    transformation = [[0.6, -0.6], [-0.4, 0.8]]
+    X_aniso = np.dot(X, transformation)
+    aniso = (X_aniso, y)
+    varied = datasets.make_blobs(n_samples=num_samples,
+                                 cluster_std=[1.0, 2.5, 0.5],
+                                 random_state=random_state)
+    data = [noisy_circles, noisy_moons, aniso, varied]
     return data
 
 def plot_results(X, y, fignum, title):
@@ -109,13 +119,13 @@ class SpectralClustering:
         A = self.make_affinity(X)
         # (2) -------
         # Construct Laplacian matrix
-        L = self.make_laplacian(A)
+        L, Dinvsq = self.make_laplacian(A)
         # (3) -------
         # Find the K largest eigenvectors of L
-        LX = self.make_eigenvector_matrix(L)
+        LX = self.make_eigenvector_matrix(L, Dinvsq)
         # (4) -------
         # Finally, do clustering on reduced space using KMeans:
-        km = KMeans(n_clusters=2, n_init=20)
+        km = KMeans(n_clusters=self.num_clusters, n_init=20)
         km.fit(LX)
         self._labels = km.labels_
         self.auto_eval_cluster()
@@ -174,13 +184,14 @@ class SpectralClustering:
             print("Laplacian:")
             print(L)
             print(np.isclose(L[0,1], -A[0,1]/np.sqrt(D[1,1]*D[0,0])))
-        return L
+        return L, Dinvsq
 
-    def make_eigenvector_matrix(self, L):
+    def make_eigenvector_matrix(self, L, Dinvsq):
         # find eigenvalues/eigenvectors, pick best ones
         # to use for spectral clustering, construct matrix
         # out of eigenvectors, normalize, and return
-        eigvals, eigvects = np.linalg.eigh(L)
+        #eigvals, eigvects = np.linalg.eigh(L)
+        eigvals, eigvects = sla.eigh(L, check_finite=False, eigvals=(0,self.num_clusters))
         best_eigens = [i for i in range(self.num_clusters)]
         if self._debug:
             print("Best eigenvalues: {}".format(best_eigens))
@@ -191,31 +202,59 @@ class SpectralClustering:
                 if not np.isclose(np.dot(LX[:,i], LX[:,j]), 0):
                     print("WARNING: eigenvectors {},{} not orthogonal!".format(i,j))
         # normalize new eigenvector-column-matrix
-        LX = (LX.T / np.linalg.norm(LX, axis=1)).T
+        if self._debug:
+            print("Best eigenvects, no normalization:")
+            print(LX)
+        # transform eigenvects to indicator matrix H
+        LX = Dinvsq.dot(LX)
+        norms = np.linalg.norm(LX, axis=1)
+        bad_norms = np.where(norms == 0)
+        norms[bad_norms] = 1
+        LX = (LX.T / norms).T
         self._LX = LX
         if self._debug:
+            print("Normalized best eigenvects:")
             print(LX)
-            # verify: L v = \lamda v
             print("Eigenvalues:")
             print(eigvals)
+            # verify: L v = \lamda v
             #print("Verify an eigenvector + eigenvalue")
             #print(np.isclose(np.dot(L,eigvects[:,1]), 
             #                 eigvals[1]*eigvects[:,1]))
         return LX
 
+
 ###############################################################
 #  MAIN: Test on toy datasets and plot
 ###############################################################
 def main():
+    t = timeit.default_timer
     datasets = generate_datasets()
-    X, y = datasets[0]
-
-    print("Running spectral clustering")
-    model = SpectralClustering(num_clusters=2, sigma_sq=0.01)
-    y_pred = model.fit_predict(X)
-
-    # plot results
     plots = []
+
+    X, y = datasets[0]
+    print("Running spectral clustering, original")
+    model = SpectralClustering(num_clusters=2, sigma_sq=0.02)
+    t_start = t()
+    y_pred = model.fit_predict(X)
+    t_end = t()
+    print("Time: {}".format(t_end-t_start))
+
+    add_subplot(plots, X, y, "Ground Truth")
+    add_subplot(plots, model._LX, y_pred, 
+                "Spectral clustering:\nembedded domain",
+                plot_type='sc-circle')
+    add_subplot(plots, X, y_pred, 
+                "Spectral clustering:\noriginal domain")
+
+    X, y = datasets[3]
+    print("Running spectral clustering, dataset 3")
+    model = SpectralClustering(num_clusters=3)
+    t_start = t()
+    y_pred = model.fit_predict(X)
+    t_end = t()
+    print("Time: {}".format(t_end-t_start))
+
     add_subplot(plots, X, y, "Ground Truth")
     add_subplot(plots, model._LX, y_pred, 
                 "Spectral clustering:\nembedded domain",
