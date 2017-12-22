@@ -69,27 +69,47 @@ if __name__=='__main__':
   print(vocab)
 
   km = KMeans(n_clusters=num_clusters, n_init=20)
-  print(wv)
+  #print(wv)
   km.fit_predict(wv)
 
   tsne = TSNE(n_components=2, random_state=0)
   X = tsne.fit_transform(wv)
 
-  plot_results(X, vocab, km.labels_, 1, "english characters")
+  plot_results(X, vocab, km.labels_, 1, "Finnish Characters")
 
   """
   Try Sklearn spectral clustering
+  """
   """
   A = get_affinity(vocab, wv)
   cluster = skcluster.SpectralClustering(n_clusters=num_clusters, affinity='precomputed', eigen_solver='amg', n_init=20)
   sk_spec = cluster.fit(A)
 
   plot_results(X, vocab, sk_spec.labels_, 2, "finnish characters")
+  """
 
   """
   SAME EXPERIMENT WITH OUR SPECTRAL CLUSTERING ALGORITHM
   """
-  model = WordEmbeddingsSpectralClustering(num_clusters=2, sigma_sq=0.01)
-  model.fit_predict(wv)
+  gaussian_model = WordEmbeddingsSpectralClustering(num_clusters=2, sigma_sq=0.01)
+  gaussian_model.fit_predict(wv)
 
-  #plot_results(X, vocab, model._labels, 3, "Finnish Characters")
+  plot_results(X, vocab, gaussian_model._labels, 1, "Finnish Characters")
+
+  """
+  epsilon_neighborhood_model = WordEmbeddingsSpectralClustering(num_clusters=2, sigma_sq=0.01)
+  # TEST EPSILONS
+  for e in range(2, 20, 2):
+    print("EPSILON: %.2f" % (e/10))
+    epsilon_neighborhood_model.fit(wv, algorithm="epsilon-neighborhood", epsilon=e/10)
+    if epsilon_neighborhood_model._labels is not None:
+      plot_results(X, vocab, epsilon_neighborhood_model._labels, 2, "Finnish Characters")
+
+  k_nearest_model = WordEmbeddingsSpectralClustering(num_clusters=2, sigma_sq=0.01)
+  # TEST EPSILONS
+  for k in range(2, 20, 2):
+    print("K-NEAREST WITH k=%i" % k)
+    k_nearest_model.fit(wv, algorithm="k-nearest-neighbors", k=k)
+
+    plot_results(X, vocab, k_nearest_model._labels, 2, "Finnish Characters")
+  """

@@ -234,7 +234,7 @@ class SpectralClustering:
 
 ###############################################################
 class WordEmbeddingsSpectralClustering(SpectralClustering):
-    def make_affinity(self, X, sigma=None, algorithm="gaussian"):
+    def make_affinity(self, X,  epsilon, k, algorithm, sigma=None):
         """
         X is assumed to be the matrix of embeddings.
 
@@ -244,12 +244,16 @@ class WordEmbeddingsSpectralClustering(SpectralClustering):
         if algorithm == "gaussian":
             return self._make_gaussian(X, sigma)
         elif algorithm == "epsilon-neighborhood":
-            return self._make_epsilon_neighborhood(X, sigma)
+            return self._make_epsilon_neighborhood(X, sigma, epsilon)
         elif algorithm == "k-nearest-neighbors":
-            return self._make_k_nearest(X, sigma)
+            return self._make_k_nearest_neighbors(X, sigma, k)
 
     def _make_gaussian(self, X, sigma=None):
+        print("======WV!======")
+        print(X)
         A = X.dot(X.T)
+        print("=============")
+        print(A)
         if sigma == None:
             sigma = np.std(A)
 
@@ -265,30 +269,31 @@ class WordEmbeddingsSpectralClustering(SpectralClustering):
 
         return A
 
-    def _make_epsilon_neighborhood(self, X, sigma=None):
+    def _make_k_nearest_neighbors(self, X, sigma, k):
+        from sklearn.neighbors import NearestNeighbors
+        nbrs = NearestNeighbors(n_neighbors=k, algorithm='ball_tree').fit(X)
+
+        print(nbrs.kneighbors_graph(X).toarray())
+        return nbrs.kneighbors_graph(X).toarray()
+
+    def _make_epsilon_neighborhood(self, X, sigma, EPSILON):
         def _find_epsilon(v):
-            EPSILON = 0.9
             # Replace each with a 0 if it is less than the threshhold set by epsilon
-            return np.array([1.0 if s < EPSILON else 0.0 for s in v])
+            return np.array([1 if s < EPSILON else 0.0 for s in v])
 
         M = self._make_euclidean(X)
-        print(M)
 
-        print(np.apply_along_axis(_find_epsilon, 1, M))
         return np.apply_along_axis(_find_epsilon, 1, M)
-
 
     def make_eigenvector_matrix(self, A):
         # Sparse matrix of the diagonal
-        D = scipy.sparse.csr_matrix(np.diag(np.ravel(np.sum(A, axis=1))))
+        D = np.diag(np.ravel(np.sum(A, axis=1)))
         # square root of the inverse of the sparse amtrix D
-        Dinvsq = np.sqrt(scipy.sparse.linalg.inv(D))
+        Dinvsq = np.sqrt(np.linalg.inv(D))
 
-        L = D-scipy.sparse.csr_matrix(A)
+        L = D-A
         L = Dinvsq.dot(L)
         L = L.dot(Dinvsq)
-
-        print(type(L))
 
         # Find the K smallest eigenvectors of L
         # Use this method from the multigrid solver
@@ -306,24 +311,26 @@ class WordEmbeddingsSpectralClustering(SpectralClustering):
         LX = Dinvsq.dot(eigvects)
         LX = (LX.T / np.linalg.norm(LX, axis=1)).T
         self._LX = LX
-        print(eigvals)
-        print(LX)
         return self._LX
 
-    def fit(self, X):
+    def fit(self, X, algorithm="gaussian", epsilon=0.9, k=5):
         # Set up data autoparams if missing
         self.fit_params(X)
         # construct affinity matrix
-        A = self.make_affinity(X, algorithm="gaussian")
+        A = self.make_affinity(X, epsilon, k, algorithm)
+        print(A)
         # Find the K largest eigenvectors of the Laplacian of A
         LX = self.make_eigenvector_matrix(A)
         # (4) -------
         # Finally, do clustering on reduced space using KMeans:
         km = KMeans(n_clusters=2, n_init=20)
-        km.fit(LX)
-        self._labels = km.labels_
-        self.auto_eval_cluster()
-        return self._labels
+        try:
+            km.fit(LX)
+            self._labels = km.labels_
+            self.auto_eval_cluster()
+            return self._labels
+        except:
+            print("WARNING: the eigenvector matrix could not yield a valid kmeans cluster")
 
 ###############################################################
 #  MAIN: Test on toy datasets and plot
@@ -342,10 +349,10 @@ def main():
     print("Time: {}".format(t_end-t_start))
 
     add_subplot(plots, X, y, "Ground Truth")
-    add_subplot(plots, model._LX, y_pred, 
+    add_subplot(plots, model._LX, y_pred,
                 "Spectral clustering:\nembedded domain",
                 plot_type='sc-circle')
-    add_subplot(plots, X, y_pred, 
+    add_subplot(plots, X, y_pred,
                 "Spectral clustering:\noriginal domain")
 
     X, y = datasets[3]
