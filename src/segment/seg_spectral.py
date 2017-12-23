@@ -9,11 +9,7 @@ from scipy.sparse.linalg import inv
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
-<<<<<<< HEAD
 image_file = 'trivedi.png'
-=======
-image_file = 'ashu.png'
->>>>>>> d9fa6a3aec95e6f4248ecd61b701327b11d9d530
 img = mpimg.imread(image_file)
 A = image2affinity(image_file, r=10)
 

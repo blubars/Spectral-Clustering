@@ -25,12 +25,15 @@ SUBPLOT_COLS = 4
 SEED = 212
 random.seed(SEED)
 
+import scipy
+import pyamg
+
 plot_colors = ['#377eb8', '#ff7f00', '#4daf4a']
 
 ###############################################################
 #  UTILITY FUNCTIONS
 ###############################################################
-# create toy datasets for cluster experiments: 
+# create toy datasets for cluster experiments:
 # this function was modified from sklearn.
 def generate_datasets(num_samples=500):
     noisy_circles = datasets.make_circles(
@@ -178,10 +181,10 @@ def cluster_and_plot_dataset(X, y, n_clusters, plots, sigma_sq=None):
     print("KM Accuracy: {}".format(acc_km))
     add_subplot(plots, X, y, "Ground Truth")
     add_subplot(plots, X, km.labels_, "KMeans")
-    add_subplot(plots, model._LX, y_pred, 
+    add_subplot(plots, model._LX, y_pred,
                 "Spectral clustering:\nembedded domain",
                 plot_type='sc-circle')
-    add_subplot(plots, X, y_pred, 
+    add_subplot(plots, X, y_pred,
                 "Spectral clustering:\noriginal domain")
 
 # alternate main to run profiling of spectral clustering
@@ -275,7 +278,7 @@ class SpectralClustering:
             stdlist.append(np.average(std))
         #print("Std dev of clusters: {}".format(stdlist))
         if np.average(stdlist) > 0.1:
-            print("High std deviation in embedded space, maybe try smaller sigma")
+            print("High std deviation (%.2f) in embedded space, maybe try smaller sigma" % np.average(stdlist))
 
 
     def guess_sigma_sq(self, X):
@@ -353,7 +356,7 @@ class SpectralClustering:
             print(eigvals)
             # verify: L v = \lamda v
             #print("Verify an eigenvector + eigenvalue")
-            #print(np.isclose(np.dot(L,eigvects[:,1]), 
+            #print(np.isclose(np.dot(L,eigvects[:,1]),
             #                 eigvals[1]*eigvects[:,1]))
         return LX
 
@@ -384,6 +387,111 @@ class SpectralClustering:
         times.sort()
         print("\nBest time: {}".format(times[0]))
         return times[0]
+
+###############################################################
+#  CLASS: MORPHEME SPECTRAL CLUSTERING:
+#    This inherits from the vanilla implementation, and is tweaked for working
+#    with word/character embeddings
+
+###############################################################
+class WordEmbeddingsSpectralClustering(SpectralClustering):
+    def make_affinity(self, X,  epsilon, k, algorithm, sigma=None):
+        """
+        X is assumed to be the matrix of embeddings.
+
+        To compute the affinity matrix, we take the product of
+        that matrix and its transpose, and run it through a gaussian
+        """
+        if algorithm == "gaussian":
+            return self._make_gaussian(X, sigma)
+        elif algorithm == "epsilon-neighborhood":
+            return self._make_epsilon_neighborhood(X, sigma, epsilon)
+        elif algorithm == "k-nearest-neighbors":
+            return self._make_k_nearest_neighbors(X, sigma, k)
+
+    def _make_gaussian(self, X, sigma=None):
+        print("======WV!======")
+        print(X)
+        A = X.dot(X.T)
+        print("=============")
+        print(A)
+        if sigma == None:
+            sigma = np.std(A)
+
+        return np.exp(-A**2/(sigma**2))
+
+    def _make_euclidean(self, X):
+        A = np.zeros((len(X), len(X)))
+
+        for i in range(len(X)-1):
+            for j in range(i+1, len(X)):
+                A[i,j] = np.linalg.norm(X[i]-X[j])
+                A[j,i] = A[i,j]
+
+        return A
+
+    def _make_k_nearest_neighbors(self, X, sigma, k):
+        from sklearn.neighbors import NearestNeighbors
+        nbrs = NearestNeighbors(n_neighbors=k, algorithm='ball_tree').fit(X)
+
+        print(nbrs.kneighbors_graph(X).toarray())
+        return nbrs.kneighbors_graph(X).toarray()
+
+    def _make_epsilon_neighborhood(self, X, sigma, EPSILON):
+        def _find_epsilon(v):
+            # Replace each with a 0 if it is less than the threshhold set by epsilon
+            return np.array([1 if s < EPSILON else 0.0 for s in v])
+
+        M = self._make_euclidean(X)
+
+        return np.apply_along_axis(_find_epsilon, 1, M)
+
+    def make_eigenvector_matrix(self, A):
+        # Sparse matrix of the diagonal
+        D = np.diag(np.ravel(np.sum(A, axis=1)))
+        # square root of the inverse of the sparse amtrix D
+        Dinvsq = np.sqrt(np.linalg.inv(D))
+
+        L = D-A
+        L = Dinvsq.dot(L)
+        L = L.dot(Dinvsq)
+
+        # Find the K smallest eigenvectors of L
+        # Use this method from the multigrid solver
+        ml = pyamg.smoothed_aggregation_solver(L, D)
+        # Perform multigrid 'preconditioning'
+        M = ml.aspreconditioner()
+        # Find the k smallest eigenvalues and corresponding eigenvectos of the matrix
+        eigvals, eigvects = scipy.sparse.linalg.eigs(M, k=self.num_clusters, which='SM')
+        # eigvals, eigvects = np.linalg.eigh(M)
+
+        # lowest_eigs = eigvects[:, :self.num_clusters]
+        # print("Found %i lowest Eigenvalues" % self.num_clusters)
+        # print(eigvals[:self.num_clusters])
+
+        LX = Dinvsq.dot(eigvects)
+        LX = (LX.T / np.linalg.norm(LX, axis=1)).T
+        self._LX = LX
+        return self._LX
+
+    def fit(self, X, algorithm="gaussian", epsilon=0.9, k=5):
+        # Set up data autoparams if missing
+        self.fit_params(X)
+        # construct affinity matrix
+        A = self.make_affinity(X, epsilon, k, algorithm)
+        print(A)
+        # Find the K largest eigenvectors of the Laplacian of A
+        LX = self.make_eigenvector_matrix(A)
+        # (4) -------
+        # Finally, do clustering on reduced space using KMeans:
+        km = KMeans(n_clusters=2, n_init=20)
+        try:
+            km.fit(LX)
+            self._labels = km.labels_
+            self.auto_eval_cluster()
+            return self._labels
+        except:
+            print("WARNING: the eigenvector matrix could not yield a valid kmeans cluster")
 
 ###############################################################
 #  MAIN: Test on toy datasets and plot
